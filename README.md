@@ -1,6 +1,6 @@
 # Yayasan Ambali - Harapan & Kesetaraan
 
-Aplikasi purwarupa (*prototype*) berbasis web untuk **Yayasan Ambali**, sebuah yayasan fiktif yang berfokus dalam peduli sosial pada kaum tunawisma serta menghapus diskriminasi terhadap komunitas kulit hitam.
+Aplikasi berbasis web untuk **Yayasan Ambali**, sebuah yayasan fiktif yang berfokus dalam peduli sosial pada kaum tunawisma serta menghapus diskriminasi terhadap komunitas kulit hitam.
 
 Aplikasi ini mencakup:
 1. **Laman Utama Publik (Profile):** Laman pendaratan (*Landing Page*) informatif tentang program dukungan dan fasilitas perlindungan.
@@ -24,7 +24,7 @@ Proyek ini berisi repositori bersarang (`frontend/` dan `backend/`), namun Anda 
 
 ```bash
 # Lakukan kloning repositori (Contoh)
-git clone https://github.com/username/yayasan-ambali.git
+git clone https://github.com/alviangalen/yayasan-ambali.git
 cd yayasan-ambali
 
 # Unduh semua dependensi baik untuk root, frontend maupun backend hanya dengan satu baris ini
@@ -78,4 +78,4 @@ npm run dev
 Selamat! Sistem otomatis akan menyalakan **Backend pada `http://localhost:5000`** dan antarmuka **Frontend pada `http://localhost:5173`** secara berdampingan.
 
 ---
-*Dibuat oleh Tim Yayasan Ambali (Desain Purwarupa).*
+*Dibuat oleh Tim Yayasan Ambali.*
