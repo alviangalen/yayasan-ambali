@@ -13,6 +13,7 @@ export default function CreatorsPage() {
   const [gdriveLink, setGdriveLink] = useState('');
   const [isPremium, setIsPremium] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
+  const [subscriptions, setSubscriptions] = useState([]);
 
   const [activeCommentPost, setActiveCommentPost] = useState(null);
   const [commentText, setCommentText] = useState('');
@@ -21,21 +22,35 @@ export default function CreatorsPage() {
   const [tipPost, setTipPost] = useState(null);
   const [tipAmount, setTipAmount] = useState('');
 
-  useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id, session.user.user_metadata?.full_name);
+      if (session?.user) {
+          fetchProfile(session.user.id, session.user.user_metadata?.full_name);
+          fetchSubscriptions(session.user.id);
+      }
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
-        if (session?.user) fetchProfile(session.user.id, session.user.user_metadata?.full_name);
+        if (session?.user) {
+            fetchProfile(session.user.id, session.user.user_metadata?.full_name);
+            fetchSubscriptions(session.user.id);
+        } else {
+            setSubscriptions([]);
+        }
       }
     );
 
     return () => authListener.subscription.unsubscribe();
   }, []);
+
+  const fetchSubscriptions = async (uid) => {
+      try {
+          const res = await axios.get(`/api/subscriptions/${uid}`);
+          setSubscriptions(res.data || []);
+      } catch (err) { console.error(err); }
+  };
 
   const fetchProfile = async (id, name) => {
       try {
@@ -108,6 +123,7 @@ export default function CreatorsPage() {
               });
               alert("Langganan Berhasil! Akses eksklusif telah terbuka.");
               fetchProfile(user.id);
+              fetchSubscriptions(user.id);
           } catch (err) {
               alert(err.response?.data?.error || "Gagal berlangganan. Pastikan saldo Anda mencukupi.");
           }
@@ -166,7 +182,7 @@ export default function CreatorsPage() {
 
   return (
     <div className="platform-body">
-      {!user && <AuthModal onLoginSuccess={(u) => {setUser(u); fetchProfile(u.id, u.user_metadata?.full_name);}} />}
+      {!user && <AuthModal onLoginSuccess={(u) => {setUser(u); fetchProfile(u.id, u.user_metadata?.full_name); fetchSubscriptions(u.id);}} />}
 
       {tipPost && (
           <div className="modal-overlay" onClick={()=>setTipPost(null)}>
@@ -240,7 +256,7 @@ export default function CreatorsPage() {
               <div className="post-content">
                 <p>{post.content}</p>
                 
-                {post.is_unlocked ? (
+                {(!post.is_premium || (user && post.user_id === user.id) || subscriptions.includes(post.user_id)) ? (
                   <div className="video-embed">
                      <iframe src={getEmbedUrl(post.google_drive_link)} allow="autoplay" allowFullScreen></iframe>
                   </div>
