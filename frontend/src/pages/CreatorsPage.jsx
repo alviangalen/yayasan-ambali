@@ -37,11 +37,9 @@ export default function CreatorsPage() {
     return () => authListener.subscription.unsubscribe();
   }, []);
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
   const fetchProfile = async (id, name) => {
       try {
-          const res = await axios.get(`${API_URL}/api/profiles/${id}?name=${name || ''}`);
+          const res = await axios.get(`/api/profiles/${id}?name=${name || ''}`);
           setProfile(res.data);
           fetchPosts(id);
       } catch (err) { console.error(err); }
@@ -51,7 +49,7 @@ export default function CreatorsPage() {
     const uid = currentUserId || user?.id;
     setLoadingPosts(true);
     try {
-      const url = `${API_URL}/api/posts${uid ? '?user_id='+uid : ''}`;
+      const url = `/api/posts${uid ? '?user_id='+uid : ''}`;
       const res = await axios.get(url);
       setPosts(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
@@ -68,7 +66,7 @@ export default function CreatorsPage() {
   const handlePostSubmit = async () => {
     if (!gdriveLink) return alert("Tautan Google Drive diwajibkan!");
     try {
-      await axios.post(`${API_URL}/api/posts`, {
+      await axios.post(`/api/posts`, {
         content,
         google_drive_link: gdriveLink,
         user_id: user.id,
@@ -85,7 +83,7 @@ export default function CreatorsPage() {
   const handleLike = async (post) => {
       if (!user) return alert("Anda harus login untuk memberi Like!");
       try {
-          const res = await axios.post(`${API_URL}/api/posts/${post.id}/like`, { user_id: user.id });
+          const res = await axios.post(`/api/posts/${post.id}/like`, { user_id: user.id });
           setPosts(posts.map(p => {
               if (p.id === post.id) {
                   return {
@@ -104,7 +102,7 @@ export default function CreatorsPage() {
       if (creatorId === user.id) return alert("Anda tidak dapat berlangganan ke diri sendiri.");
       if (window.confirm("Berlangganan Akses Kreator ini seharga Rp 50.000?")) {
           try {
-              await axios.post(`${API_URL}/api/subscribe`, {
+              await axios.post(`/api/subscribe`, {
                   subscriber_id: user.id,
                   creator_id: creatorId
               });
@@ -119,7 +117,7 @@ export default function CreatorsPage() {
   const handleSendTip = async () => {
       if (!tipAmount || tipAmount <= 0) return alert("Nominal tip tidak valid");
       try {
-          await axios.post(`${API_URL}/api/tip`, {
+          await axios.post(`/api/tip`, {
               sender_id: user.id,
               receiver_id: tipPost.user_id,
               amount: parseFloat(tipAmount)
@@ -139,7 +137,7 @@ export default function CreatorsPage() {
           return;
       }
       setActiveCommentPost(postId);
-      const res = await axios.get(`${API_URL}/api/posts/${postId}/comments`);
+      const res = await axios.get(`/api/posts/${postId}/comments`);
       setCommentsData(res.data);
   };
 
@@ -147,7 +145,7 @@ export default function CreatorsPage() {
       if (!user) return alert("Silahkan login untuk komentar!");
       if (!commentText) return;
       try {
-          const res = await axios.post(`${API_URL}/api/posts/${postId}/comments`, {
+          const res = await axios.post(`/api/posts/${postId}/comments`, {
               user_id: user.id,
               user_name: user?.user_metadata?.full_name || user.email.split('@')[0],
               content: commentText

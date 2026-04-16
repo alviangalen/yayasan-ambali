@@ -21,11 +21,9 @@ export default function TopUpPage() {
         return () => listener.subscription.unsubscribe();
     }, []);
 
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
     const fetchProfile = async (id, name) => {
         try {
-            const res = await axios.get(`${API_URL}/api/profiles/${id}?name=${name || ''}`);
+            const res = await axios.get(`/api/profiles/${id}?name=${name || ''}`);
             setProfile(res.data);
         } catch (e) {
             console.error(e);
@@ -35,7 +33,7 @@ export default function TopUpPage() {
     const handleTopUp = async () => {
         if (!amount || amount <= 0) return alert('Masukkan nominal valid');
         try {
-            const res = await axios.post(`${API_URL}/api/topup`, {
+            const res = await axios.post(`/api/topup`, {
                 user_id: user.id,
                 amount: parseFloat(amount)
             });
