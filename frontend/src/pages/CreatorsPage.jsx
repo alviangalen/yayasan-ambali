@@ -185,28 +185,29 @@ export default function CreatorsPage() {
 
     // YouTube
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      let videoId = '';
-      if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
-      else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1].split('&')[0];
-      else if (url.includes('shorts/')) videoId = url.split('shorts/')[1].split('?')[0];
-      
-      if (videoId) return <iframe src={`https://www.youtube.com/embed/${videoId}`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{width: '100%', height: '100%', minHeight: '300px', borderRadius: '10px', border: 'none'}}></iframe>;
+      const ytRegex = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\s]+)/;
+      const match = url.match(ytRegex);
+      if (match && match[1]) {
+        return <iframe src={`https://www.youtube.com/embed/${match[1]}`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{width: '100%', height: '100%', minHeight: '300px', borderRadius: '10px', border: 'none'}}></iframe>;
+      }
     }
 
     // TikTok
     if (url.includes('tiktok.com')) {
-      let videoId = '';
-      if (url.includes('/video/')) videoId = url.split('/video/')[1].split('?')[0];
-      if (videoId) return <iframe src={`https://www.tiktok.com/embed/v2/${videoId}`} allow="autoplay; fullscreen" style={{width: '100%', height: '500px', borderRadius: '10px', border: 'none'}}></iframe>;
+      const tkRegex = /video\/(\d+)/;
+      const match = url.match(tkRegex);
+      if (match && match[1]) {
+        return <iframe src={`https://www.tiktok.com/embed/v2/${match[1]}`} allow="autoplay; fullscreen" style={{width: '100%', height: '500px', borderRadius: '10px', border: 'none'}}></iframe>;
+      }
       return <a href={url} target="_blank" rel="noopener noreferrer" style={{color: 'var(--accent-gold)', padding: '20px', display: 'block', textAlign: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '10px'}}>Lihat Video TikTok</a>;
     }
 
     // Instagram
     if (url.includes('instagram.com')) {
-       let embedUrl = url;
-       if (!embedUrl.endsWith('/')) embedUrl += '/';
-       embedUrl += 'embed';
-       return <iframe src={embedUrl} allow="autoplay; fullscreen" style={{width: '100%', height: '450px', borderRadius: '10px', border: 'none'}} scrolling="no"></iframe>;
+       let baseUrl = url.split('?')[0]; // buang query params seperti ?igsh=...
+       if (!baseUrl.endsWith('/')) baseUrl += '/';
+       if (!baseUrl.endsWith('embed/')) baseUrl += 'embed/';
+       return <iframe src={baseUrl} allow="autoplay; fullscreen" style={{width: '100%', height: '450px', borderRadius: '10px', border: 'none'}} scrolling="no"></iframe>;
     }
 
     // Google Drive / Fallback
