@@ -26,9 +26,11 @@ export default function StudioPage() {
         return () => authListener.subscription.unsubscribe();
     }, []);
 
+    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
     const fetchMyPosts = async (uid) => {
         try {
-            const res = await axios.get(`http://localhost:5000/api/posts?user_id=${uid}`);
+            const res = await axios.get(`${API_URL}/api/posts?user_id=${uid}`);
             setPosts(res.data.filter(p => p.user_id === uid)); // Filter locally as safety measure
         } catch (e) {
             console.error(e);
@@ -38,7 +40,7 @@ export default function StudioPage() {
     const handleDelete = async (postId) => {
         if (!window.confirm("Yakin ingin menghapus postingan ini selamanya? \nSeluruh rekam data (komentar/likes) akan hancur.")) return;
         try {
-            await axios.delete(`http://localhost:5000/api/posts/${postId}`, { data: { user_id: user.id } });
+            await axios.delete(`${API_URL}/api/posts/${postId}`, { data: { user_id: user.id } });
             setPosts(posts.filter(p => p.id !== postId));
             alert("Video/Postingan sukses dihapus!");
         } catch (e) {
@@ -48,7 +50,7 @@ export default function StudioPage() {
 
     const handleEditSave = async () => {
         try {
-            const res = await axios.put(`http://localhost:5000/api/posts/${editingPost.id}`, {
+            const res = await axios.put(`${API_URL}/api/posts/${editingPost.id}`, {
                 content: editContent,
                 google_drive_link: editLink,
                 is_premium: editPremium,
