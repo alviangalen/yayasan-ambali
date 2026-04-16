@@ -10,7 +10,7 @@ export default function CreatorsPage() {
   const [posts, setPosts] = useState([]);
   
   const [content, setContent] = useState('');
-  const [gdriveLink, setGdriveLink] = useState('');
+  const [mediaLink, setMediaLink] = useState('');
   const [isPremium, setIsPremium] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [subscriptions, setSubscriptions] = useState([]);
@@ -80,16 +80,16 @@ export default function CreatorsPage() {
   }, [user]);
 
   const handlePostSubmit = async () => {
-    if (!gdriveLink) return alert("Tautan Google Drive diwajibkan!");
+    if (!mediaLink) return alert("Tautan Video diwajibkan!");
     try {
       await axios.post(`/api/posts`, {
         content,
-        google_drive_link: gdriveLink,
+        google_drive_link: mediaLink,
         user_id: user.id,
         user_name: user?.user_metadata?.full_name || user.email.split('@')[0],
         is_premium: isPremium
       });
-      setContent(''); setGdriveLink(''); setIsPremium(false);
+      setContent(''); setMediaLink(''); setIsPremium(false);
       fetchPosts();
     } catch (err) {
       alert("Gagal mem-posting: " + (err.response?.data?.error || err.message));
@@ -180,10 +180,39 @@ export default function CreatorsPage() {
       } catch (err) { alert("Gagal mengirim komentar!"); }
   };
 
-  const getEmbedUrl = (url) => {
+  const renderMedia = (url) => {
     if (!url) return null;
-    if (url.includes('/view')) return url.replace('/view', '/preview');
-    return url;
+
+    // YouTube
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      let videoId = '';
+      if (url.includes('youtu.be/')) videoId = url.split('youtu.be/')[1].split('?')[0];
+      else if (url.includes('watch?v=')) videoId = url.split('watch?v=')[1].split('&')[0];
+      else if (url.includes('shorts/')) videoId = url.split('shorts/')[1].split('?')[0];
+      
+      if (videoId) return <iframe src={`https://www.youtube.com/embed/${videoId}`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{width: '100%', height: '100%', minHeight: '300px', borderRadius: '10px', border: 'none'}}></iframe>;
+    }
+
+    // TikTok
+    if (url.includes('tiktok.com')) {
+      let videoId = '';
+      if (url.includes('/video/')) videoId = url.split('/video/')[1].split('?')[0];
+      if (videoId) return <iframe src={`https://www.tiktok.com/embed/v2/${videoId}`} allow="autoplay; fullscreen" style={{width: '100%', height: '500px', borderRadius: '10px', border: 'none'}}></iframe>;
+      return <a href={url} target="_blank" rel="noopener noreferrer" style={{color: 'var(--accent-gold)', padding: '20px', display: 'block', textAlign: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '10px'}}>Lihat Video TikTok</a>;
+    }
+
+    // Instagram
+    if (url.includes('instagram.com')) {
+       let embedUrl = url;
+       if (!embedUrl.endsWith('/')) embedUrl += '/';
+       embedUrl += 'embed';
+       return <iframe src={embedUrl} allow="autoplay; fullscreen" style={{width: '100%', height: '450px', borderRadius: '10px', border: 'none'}} scrolling="no"></iframe>;
+    }
+
+    // Google Drive / Fallback
+    let finalUrl = url;
+    if (finalUrl.includes('/view')) finalUrl = finalUrl.replace('/view', '/preview');
+    return <iframe src={finalUrl} allow="autoplay; fullscreen" allowFullScreen style={{width: '100%', height: '100%', minHeight: '300px', borderRadius: '10px', border: 'none'}}></iframe>;
   };
 
   const handleLogout = async () => await supabase.auth.signOut();
@@ -238,7 +267,7 @@ export default function CreatorsPage() {
               <input type="text" placeholder="Deskripsi post..." className="post-input" value={content} onChange={e => setContent(e.target.value)} />
             </div>
             <div style={{display: 'flex', gap: '15px', width: '100%', alignItems: 'center'}}>
-              <input type="text" placeholder="Link Google Drive Video (Wajib)" className="post-input" style={{flex: 1}} value={gdriveLink} onChange={e => setGdriveLink(e.target.value)} />
+              <input type="text" placeholder="Link Video (G-Drive, YouTube, IG, TikTok)" className="post-input" style={{flex: 1}} value={mediaLink} onChange={e => setMediaLink(e.target.value)} />
               
               <label style={{color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px'}}>
                   <input type="checkbox" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} />
@@ -266,7 +295,7 @@ export default function CreatorsPage() {
                 
                 {(!post.is_premium || (user && post.user_id === user.id) || subscriptions.includes(post.user_id)) ? (
                   <div className="video-embed">
-                     <iframe src={getEmbedUrl(post.google_drive_link)} allow="autoplay" allowFullScreen></iframe>
+                     {renderMedia(post.google_drive_link)}
                   </div>
                 ) : (
                   <div className="locked-content">
