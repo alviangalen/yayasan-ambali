@@ -159,12 +159,20 @@ app.post('/api/subscribe', async (req, res) => {
     const subscriber = await ensureProfile(subscriber_id);
     if (!subscriber || subscriber.balance < PRICE) return res.status(400).json({ error: "Saldo tidak mencukupi" });
 
-    await supabase.from('profiles').update({ balance: subscriber.balance - PRICE }).eq('id', subscriber_id);
+    const { error: err1 } = await supabase.from('profiles').update({ balance: subscriber.balance - PRICE }).eq('id', subscriber_id);
+    if (err1) return res.status(400).json({ error: "Gagal memotong saldo: " + err1.message });
+    
     const creator = await ensureProfile(creator_id);
-    if (creator) await supabase.from('profiles').update({ balance: creator.balance + PRICE }).eq('id', creator_id);
+    if (creator) {
+        const { error: err2 } = await supabase.from('profiles').update({ balance: creator.balance + PRICE }).eq('id', creator_id);
+        if (err2) return res.status(400).json({ error: "Gagal menambah saldo kreator: " + err2.message });
+    }
 
-    await supabase.from('subscriptions').insert([{ subscriber_id, creator_id }]);
-    await supabase.from('transactions').insert([{ sender_id: subscriber_id, receiver_id: creator_id, type: 'subscription', amount: PRICE }]);
+    const { error: errSub } = await supabase.from('subscriptions').insert([{ subscriber_id, creator_id }]);
+    if (errSub) return res.status(400).json({ error: "Gagal mencatat langganan (Tabel mungkin belum dibuat): " + errSub.message });
+
+    const { error: errTrans } = await supabase.from('transactions').insert([{ sender_id: subscriber_id, receiver_id: creator_id, type: 'subscription', amount: PRICE }]);
+    if (errTrans) console.log("Gagal mencatat transaksi: ", errTrans.message); // non-fatal
 
     res.json({ status: 'success', balance: subscriber.balance - PRICE });
 });

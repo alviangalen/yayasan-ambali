@@ -122,6 +122,13 @@ export default function CreatorsPage() {
                   creator_id: creatorId
               });
               alert("Langganan Berhasil! Akses eksklusif telah terbuka.");
+              
+              // Optimistic UI lock-release
+              setSubscriptions(prev => {
+                  if (!prev.includes(creatorId)) return [...prev, creatorId];
+                  return prev;
+              });
+              
               fetchProfile(user.id);
               fetchSubscriptions(user.id);
           } catch (err) {
