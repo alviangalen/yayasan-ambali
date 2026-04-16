@@ -29,10 +29,12 @@ export default function CreatorsPage() {
     setLoadingPosts(true);
     try {
       const res = await axios.get('http://localhost:5000/api/posts');
-      setPosts(res.data.length ? res.data : getDefaultPosts());
+      if (res.data && Array.isArray(res.data)) {
+        setPosts(res.data);
+      }
     } catch (err) {
       console.error(err);
-      setPosts(getDefaultPosts());
+      setPosts([]);
     }
     setLoadingPosts(false);
   };
@@ -58,7 +60,7 @@ export default function CreatorsPage() {
       setGdriveLink('');
       fetchPosts();
     } catch (err) {
-      alert("Gagal mem-posting: " + err.message);
+      alert("Gagal mem-posting: " + (err.response?.data?.error || err.message));
     }
   };
 
@@ -70,22 +72,7 @@ export default function CreatorsPage() {
     return url;
   };
 
-  const getDefaultPosts = () => [
-    {
-      id: 1,
-      user_name: 'Ambatay',
-      content: 'Dalam seri edukasi kali ini, saya akan membagikan tutorial memancing perkoro',
-      google_drive_link: null,
-      created_at: new Date(Date.now() - 7200000).toISOString()
-    },
-    {
-      id: 2,
-      user_name: 'Ambazel',
-      content: 'Tutorial kokang joni 5 menit lancar',
-      google_drive_link: null,
-      created_at: new Date(Date.now() - 18000000).toISOString()
-    }
-  ];
+
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
