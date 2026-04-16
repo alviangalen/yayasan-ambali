@@ -41,9 +41,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     counter.innerText = target + "+";
                 }
             };
-            
+
             const rect = counter.getBoundingClientRect();
-            if(rect.top < window.innerHeight && !counter.classList.contains('counted')) {
+            if (rect.top < window.innerHeight && !counter.classList.contains('counted')) {
                 counter.classList.add('counted');
                 updateCount();
             }
@@ -59,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             const targetId = this.getAttribute('href').substring(1);
             const targetEl = document.getElementById(targetId);
-            if(targetEl) {
+            if (targetEl) {
                 targetEl.scrollIntoView({
                     behavior: 'smooth'
                 });
