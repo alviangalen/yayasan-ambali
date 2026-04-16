@@ -24,22 +24,22 @@ export default function CreatorsPage() {
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
+      if (session?.user) fetchProfile(session.user.id, session.user.user_metadata?.full_name);
     });
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setUser(session?.user ?? null);
-        if (session?.user) fetchProfile(session.user.id);
+        if (session?.user) fetchProfile(session.user.id, session.user.user_metadata?.full_name);
       }
     );
 
     return () => authListener.subscription.unsubscribe();
   }, []);
 
-  const fetchProfile = async (id) => {
+  const fetchProfile = async (id, name) => {
       try {
-          const res = await axios.get(`http://localhost:5000/api/profiles/${id}`);
+          const res = await axios.get(`http://localhost:5000/api/profiles/${id}?name=${name || ''}`);
           setProfile(res.data);
           fetchPosts(id);
       } catch (err) { console.error(err); }
@@ -166,7 +166,7 @@ export default function CreatorsPage() {
 
   return (
     <div className="platform-body">
-      {!user && <AuthModal onLoginSuccess={(u) => {setUser(u); fetchProfile(u.id);}} />}
+      {!user && <AuthModal onLoginSuccess={(u) => {setUser(u); fetchProfile(u.id, u.user_metadata?.full_name);}} />}
 
       {tipPost && (
           <div className="modal-overlay" onClick={()=>setTipPost(null)}>
@@ -201,14 +201,16 @@ export default function CreatorsPage() {
             <li>🔥 Sedang Tren</li>
             <li>📚 Edukasi Bisnis</li>
             <li>🎨 Seni & Budaya</li>
-            <li>⚙️ Pengaturan</li>
+            <li style={{cursor: 'pointer'}} onClick={() => window.location.href = '/studio'}>⚙️ Kelola Konten Saya (Studio)</li>
           </ul>
         </aside>
 
         <main className="feed">
           <div className="create-post glass-panel" style={{flexDirection: 'column', alignItems: 'flex-start'}}>
             <div style={{display: 'flex', gap: '15px', width: '100%', marginBottom: '10px'}}>
-              <div className="avatar-small"></div>
+              <div className="avatar-small" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>
+                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U'}
+              </div>
               <input type="text" placeholder="Deskripsi post..." className="post-input" value={content} onChange={e => setContent(e.target.value)} />
             </div>
             <div style={{display: 'flex', gap: '15px', width: '100%', alignItems: 'center'}}>

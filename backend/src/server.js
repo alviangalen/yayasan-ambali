@@ -23,6 +23,12 @@ async function ensureProfile(userId, userName) {
             .insert([{ id: userId, full_name: userName || 'User', balance: 2500000 }])
             .select().single();
         return newProfile;
+    } else if (userName && data.full_name !== userName && (data.full_name === 'User' || !data.full_name)) {
+        const { data: updated } = await supabase.from('profiles')
+            .update({ full_name: userName })
+            .eq('id', userId)
+            .select().single();
+        return updated;
     }
     return data;
 }
@@ -80,6 +86,31 @@ app.post('/api/posts', async (req, res) => {
 
     if (error) return res.status(400).json({ error: error.message });
     res.json(data[0]);
+});
+
+app.put('/api/posts/:id', async (req, res) => {
+    const { content, google_drive_link, is_premium, user_id } = req.body;
+    
+    const { data: check } = await supabase.from('posts').select('user_id').eq('id', req.params.id).single();
+    if (!check || check.user_id !== user_id) return res.status(403).json({ error: 'Unauthorized to edit this post' });
+
+    const { data, error } = await supabase.from('posts')
+        .update({ content, google_drive_link, is_premium })
+        .eq('id', req.params.id)
+        .select();
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data[0]);
+});
+
+app.delete('/api/posts/:id', async (req, res) => {
+    const { user_id } = req.body;
+
+    const { data: check } = await supabase.from('posts').select('user_id').eq('id', req.params.id).single();
+    if (!check || check.user_id !== user_id) return res.status(403).json({ error: 'Unauthorized to delete this post' });
+
+    const { error } = await supabase.from('posts').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ status: 'deleted' });
 });
 
 // --- API Suka (Likes) ---

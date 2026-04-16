@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import CreatorsPage from './pages/CreatorsPage';
 import TopUpPage from './pages/TopUpPage';
+import StudioPage from './pages/StudioPage';
 import { useEffect } from 'react';
 
 function App() {
@@ -28,6 +29,7 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/creators" element={<CreatorsPage />} />
         <Route path="/topup" element={<TopUpPage />} />
+        <Route path="/studio" element={<StudioPage />} />
       </Routes>
     </Router>
   );
