@@ -11,8 +11,18 @@ app.use(cors());
 app.use(express.json());
 
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
-const supabase = createClient(supabaseUrl, supabaseKey);
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
+const supabaseKey = supabaseServiceKey || supabaseAnonKey;
+if (!supabaseServiceKey) {
+    console.warn('[WARNING] SUPABASE_SERVICE_ROLE_KEY tidak ditemukan di .env. Menggunakan Anon Key. Operasi seperti subscribe mungkin diblokir oleh RLS.');
+}
+const supabase = createClient(supabaseUrl, supabaseKey, supabaseServiceKey ? {
+    auth: {
+        autoRefreshToken: false,
+        persistSession: false
+    }
+} : {});
 
 // --- Helpers ---
 async function ensureProfile(userId, userName) {
