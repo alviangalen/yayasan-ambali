@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import CreatorsPage from './pages/CreatorsPage';
+import TopUpPage from './pages/TopUpPage';
 import { useEffect } from 'react';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/creators" element={<CreatorsPage />} />
+        <Route path="/topup" element={<TopUpPage />} />
       </Routes>
     </Router>
   );
