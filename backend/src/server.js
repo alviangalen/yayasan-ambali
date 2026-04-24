@@ -184,3 +184,5 @@ app.post('/api/tip', async (req, res) => {
 });
 
 app.listen(port, () => console.log(`Backend server running on port ${port}`));
+
+module.exports = app;
