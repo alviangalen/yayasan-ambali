@@ -3,3 +3,10 @@ node_modules/
 .DS_Store
 dist/
 build/
+
+# Temporary and Scratch files
+scratch/
+*.log
+
+# UI-UX Lib (Excluding as requested)
+src/lib/ui-ux/
