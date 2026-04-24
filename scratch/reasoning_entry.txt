@@ -1,0 +1,1 @@
+162,Yayasan Ambali,Social Proof + Creator Feed,Yayasan Ambali Premium + Glassmorphism,Premium dark + Gold accent + Purple highlights,Elegant (Outfit) + Readable (Inter),Backdrop blur (15px) + Golden glow + Smooth scroll,"{""if_premium"": ""increase-gold-accents"", ""if_charity"": ""emphasize-trust""}",Generic flat design + Pure white bg + Low-quality video embeds,HIGH

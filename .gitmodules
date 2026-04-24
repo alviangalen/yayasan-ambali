@@ -1,0 +1,3 @@
+[submodule "src/lib/ui-ux"]
+	path = src/lib/ui-ux
+	url = https://github.com/nextlevelbuilder/ui-ux-pro-max-skill

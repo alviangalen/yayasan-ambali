@@ -3,30 +3,48 @@ import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { supabase } from '../supabaseClient';
 import AuthModal from '../components/AuthModal';
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
+import { 
+  Heart, 
+  MessageCircle, 
+  DollarSign, 
+  Lock, 
+  CheckCircle2, 
+  Link as LinkIcon,
+  MoreHorizontal,
+  Video,
+  Globe,
+  AtSign,
+  Sparkles
+} from 'lucide-react';
 
 export default function CreatorsPage() {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
-  
   const [content, setContent] = useState('');
   const [mediaLink, setMediaLink] = useState('');
   const [isPremium, setIsPremium] = useState(false);
   const [loadingPosts, setLoadingPosts] = useState(false);
   const [subscriptions, setSubscriptions] = useState([]);
-
   const [activeCommentPost, setActiveCommentPost] = useState(null);
   const [commentText, setCommentText] = useState('');
   const [commentsData, setCommentsData] = useState([]);
-  
   const [tipPost, setTipPost] = useState(null);
   const [tipAmount, setTipAmount] = useState('');
+  
+  // Migration States
+  const [showMigrationModal, setShowMigrationModal] = useState(false);
+  const [newUsername, setNewUsername] = useState('');
+  const [migrationError, setMigrationError] = useState('');
+  const [migrationLoading, setMigrationLoading] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
-          fetchProfile(session.user.id, session.user.user_metadata?.full_name);
+          fetchProfile(session.user.id, session.user.user_metadata?.display_name);
           fetchSubscriptions(session.user.id);
       }
     });
@@ -35,10 +53,12 @@ export default function CreatorsPage() {
       (_event, session) => {
         setUser(session?.user ?? null);
         if (session?.user) {
-            fetchProfile(session.user.id, session.user.user_metadata?.full_name);
+            fetchProfile(session.user.id, session.user.user_metadata?.display_name);
             fetchSubscriptions(session.user.id);
         } else {
             setSubscriptions([]);
+            setProfile(null);
+            setShowMigrationModal(false);
         }
       }
     );
@@ -57,8 +77,33 @@ export default function CreatorsPage() {
       try {
           const res = await axios.get(`/api/profiles/${id}?name=${name || ''}`);
           setProfile(res.data);
+          
+          // Legacy User Check: If username is missing or default, show migration modal
+          if (!res.data.username || res.data.username.startsWith('user_')) {
+              setShowMigrationModal(true);
+          }
+          
           fetchPosts(id);
       } catch (err) { console.error(err); }
+  };
+
+  const handleMigrationSubmit = async (e) => {
+      e.preventDefault();
+      setMigrationLoading(true);
+      setMigrationError('');
+      
+      try {
+          const res = await axios.put(`/api/profiles/${user.id}`, {
+              username: newUsername.toLowerCase().trim()
+          });
+          setProfile(res.data);
+          setShowMigrationModal(false);
+          alert("Username berhasil didaftarkan! Selamat datang di Ambali.");
+      } catch (err) {
+          setMigrationError(err.response?.data?.error || "Gagal mengupdate username.");
+      } finally {
+          setMigrationLoading(false);
+      }
   };
 
   const fetchPosts = async (currentUserId = null) => {
@@ -86,7 +131,7 @@ export default function CreatorsPage() {
         content,
         google_drive_link: mediaLink,
         user_id: user.id,
-        user_name: user?.user_metadata?.full_name || user.email.split('@')[0],
+        user_name: profile?.display_name || user?.user_metadata?.display_name || user.email.split('@')[0],
         is_premium: isPremium
       });
       setContent(''); setMediaLink(''); setIsPremium(false);
@@ -114,27 +159,16 @@ export default function CreatorsPage() {
   };
 
   const handleSubscribe = async (creatorId) => {
-      if (!user) return alert("Anda harus login untuk memanajemen langganan!");
-      if (creatorId === user.id) return alert("Anda tidak dapat berlangganan ke diri sendiri.");
-      if (window.confirm("Berlangganan Akses Kreator ini seharga Rp 50.000?")) {
+      if (!user) return alert("Anda harus login!");
+      if (creatorId === user.id) return alert("Diri sendiri.");
+      if (window.confirm("Berlangganan seharga Rp 50.000?")) {
           try {
-              await axios.post(`/api/subscribe`, {
-                  subscriber_id: user.id,
-                  creator_id: creatorId
-              });
-              alert("Langganan Berhasil! Akses eksklusif telah terbuka.");
-              
-              // Optimistic UI lock-release
-              setSubscriptions(prev => {
-                  if (!prev.includes(creatorId)) return [...prev, creatorId];
-                  return prev;
-              });
-              
+              await axios.post(`/api/subscribe`, { subscriber_id: user.id, creator_id: creatorId });
+              alert("Berhasil!");
+              setSubscriptions(prev => !prev.includes(creatorId) ? [...prev, creatorId] : prev);
               fetchProfile(user.id);
               fetchSubscriptions(user.id);
-          } catch (err) {
-              alert(err.response?.data?.error || "Gagal berlangganan. Pastikan saldo Anda mencukupi.");
-          }
+          } catch (err) { alert(err.response?.data?.error || "Gagal."); }
       }
   };
 
@@ -146,217 +180,282 @@ export default function CreatorsPage() {
               receiver_id: tipPost.user_id,
               amount: parseFloat(tipAmount)
           });
-          alert(`Berhasil memberi Tip Apresiasi Rp ${parseFloat(tipAmount).toLocaleString('id-ID')} !`);
-          setTipPost(null);
-          setTipAmount('');
-          fetchProfile(user.id);
-      } catch(err) {
-          alert(err.response?.data?.error || "Gagal mengirim tip.");
-      }
+          alert(`Berhasil mengirim Tip!`);
+          setTipPost(null); setTipAmount(''); fetchProfile(user.id);
+      } catch(err) { alert(err.response?.data?.error || "Gagal."); }
   };
 
   const openComments = async (postId) => {
-      if(activeCommentPost === postId) {
-          setActiveCommentPost(null);
-          return;
-      }
+      if(activeCommentPost === postId) { setActiveCommentPost(null); return; }
       setActiveCommentPost(postId);
       const res = await axios.get(`/api/posts/${postId}/comments`);
       setCommentsData(res.data);
   };
 
   const submitComment = async (postId) => {
-      if (!user) return alert("Silahkan login untuk komentar!");
+      if (!user) return alert("Login dulu!");
       if (!commentText) return;
       try {
           const res = await axios.post(`/api/posts/${postId}/comments`, {
               user_id: user.id,
-              user_name: user?.user_metadata?.full_name || user.email.split('@')[0],
+              user_name: profile?.display_name || user?.user_metadata?.display_name || user.email.split('@')[0],
               content: commentText
           });
           setCommentsData([...commentsData, res.data]);
           setCommentText('');
           setPosts(posts.map(p => p.id === postId ? {...p, comments_count: p.comments_count + 1} : p));
-      } catch (err) { alert("Gagal mengirim komentar!"); }
+      } catch (err) { alert("Gagal!"); }
   };
 
   const renderMedia = (url) => {
     if (!url) return null;
-
-    // YouTube
-    if (url.includes('youtube.com') || url.includes('youtu.be')) {
-      const ytRegex = /(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=|shorts\/))([^&?\s]+)/;
-      const match = url.match(ytRegex);
-      if (match && match[1]) {
-        return <iframe src={`https://www.youtube.com/embed/${match[1]}`} allow="autoplay; encrypted-media; fullscreen" allowFullScreen style={{width: '100%', height: '100%', minHeight: '300px', borderRadius: '10px', border: 'none'}}></iframe>;
-      }
-    }
-
-    // TikTok
-    if (url.includes('tiktok.com')) {
-      const tkRegex = /video\/(\d+)/;
-      const match = url.match(tkRegex);
-      if (match && match[1]) {
-        return <iframe src={`https://www.tiktok.com/embed/v2/${match[1]}`} allow="autoplay; fullscreen" style={{width: '100%', height: '500px', borderRadius: '10px', border: 'none'}}></iframe>;
-      }
-      return <a href={url} target="_blank" rel="noopener noreferrer" style={{color: 'var(--accent-gold)', padding: '20px', display: 'block', textAlign: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '10px'}}>Lihat Video TikTok</a>;
-    }
-
-    // Instagram
-    if (url.includes('instagram.com')) {
-       let baseUrl = url.split('?')[0]; // buang query params seperti ?igsh=...
-       if (!baseUrl.endsWith('/')) baseUrl += '/';
-       if (!baseUrl.endsWith('embed/')) baseUrl += 'embed/';
-       return <iframe src={baseUrl} allow="autoplay; fullscreen" style={{width: '100%', height: '450px', borderRadius: '10px', border: 'none'}} scrolling="no"></iframe>;
-    }
-
-    // Google Drive / Fallback
     let finalUrl = url;
-    if (finalUrl.includes('/view')) finalUrl = finalUrl.replace('/view', '/preview');
-    return <iframe src={finalUrl} allow="autoplay; fullscreen" allowFullScreen style={{width: '100%', height: '100%', minHeight: '300px', borderRadius: '10px', border: 'none'}}></iframe>;
+    let isPortrait = false;
+    if (url.includes('youtube.com') || url.includes('youtu.be')) {
+      const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|shorts\/))([^&?\s]+)/);
+      if (match) { finalUrl = `https://www.youtube.com/embed/${match[1]}`; if(url.includes('shorts')) isPortrait=true; }
+    } else if (url.includes('tiktok.com')) {
+      const match = url.match(/video\/(\d+)/);
+      if (match) { finalUrl = `https://www.tiktok.com/embed/v2/${match[1]}`; isPortrait=true; }
+    } else if (url.includes('instagram.com')) {
+       finalUrl = url.split('?')[0] + 'embed/'; isPortrait=true;
+    } else if (finalUrl.includes('/view')) {
+      finalUrl = finalUrl.replace('/view', '/preview');
+    }
+    return (
+      <div className={`post-media ${isPortrait ? 'aspect-portrait' : 'aspect-landscape'}`}>
+        <iframe src={finalUrl} allowFullScreen></iframe>
+      </div>
+    );
   };
 
   const handleLogout = async () => await supabase.auth.signOut();
 
   return (
-    <div className="platform-body">
-      {!user && <AuthModal onLoginSuccess={(u) => {setUser(u); fetchProfile(u.id, u.user_metadata?.full_name); fetchSubscriptions(u.id);}} />}
+    <div className="platform-body" style={{ minHeight: '100vh', paddingBottom: '50px' }}>
+      <Navbar user={user} profile={profile} handleLogout={handleLogout} />
+      {!user && <AuthModal onLoginSuccess={(u) => {setUser(u); fetchProfile(u.id, u.user_metadata?.display_name); fetchSubscriptions(u.id);}} />}
 
-      {tipPost && (
-          <div className="modal-overlay" onClick={()=>setTipPost(null)}>
-              <div className="modal-content" onClick={e=>e.stopPropagation()}>
-                  <h2>Tip untuk Kreator</h2>
-                  <p>Berikan dukungan apresiasi kepada kreator.</p>
-                  <input type="number" placeholder="Nominal Rp (Misal: 25000)" value={tipAmount} onChange={e=>setTipAmount(e.target.value)} />
-                  <button className="btn-premium" onClick={handleSendTip}>Kirim Tip</button>
+      {/* Mandatory Username Migration Modal */}
+      {showMigrationModal && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)', zIndex: 4000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+              <div className="glass-panel" style={{ width: '100%', maxWidth: '440px', padding: '48px', borderRadius: '32px', textAlign: 'center' }}>
+                  <div style={{ display: 'inline-flex', padding: '16px', background: 'rgba(124, 58, 237, 0.1)', borderRadius: '24px', marginBottom: '24px' }}>
+                      <Sparkles size={32} color="var(--accent-purple)" />
+                  </div>
+                  <h2 style={{ fontSize: '1.8rem', marginBottom: '12px' }}>Pilih Username Anda</h2>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '32px', lineHeight: 1.5 }}>Selamat datang kembali! Ambali kini menggunakan sistem username unik agar profil Anda lebih mudah dicari.</p>
+                  
+                  {migrationError && (
+                      <div style={{ padding: '12px', background: 'rgba(244, 63, 94, 0.1)', color: 'var(--accent-rose)', borderRadius: '12px', fontSize: '0.85rem', marginBottom: '20px' }}>
+                          {migrationError}
+                      </div>
+                  )}
+
+                  <form onSubmit={handleMigrationSubmit}>
+                      <div style={{ position: 'relative', marginBottom: '24px' }}>
+                          <AtSign size={18} style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                          <input 
+                            type="text" 
+                            placeholder="username_baru" 
+                            className="post-input" 
+                            required 
+                            style={{ paddingLeft: '48px' }}
+                            value={newUsername}
+                            onChange={(e) => setNewUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
+                          />
+                      </div>
+                      <button className="btn-premium" style={{ width: '100%', padding: '16px' }} disabled={migrationLoading}>
+                          {migrationLoading ? "Menyimpan..." : "Mulai Gunakan Ambali"}
+                      </button>
+                  </form>
               </div>
           </div>
       )}
 
-      <nav className="navbar platform-nav">
-        <div className="logo"><Link to="/" className="no-style">Ambali<span className="dot">.</span><span className="badge">EduFans</span></Link></div>
-        <div className="nav-right">
-          <Link to="/topup" className="balance" style={{textDecoration: 'none'}}>
-              Saldo: Rp {profile?.balance ? parseFloat(profile.balance).toLocaleString('id-ID') : 0} ➕
-          </Link>
-          {user?.email === 'admin@gmail.com' && (
-            <Link to="/admin" style={{
-              background: 'linear-gradient(135deg, #dc2626, #991b1b)',
-              color: '#fff', fontSize: '0.8rem', fontWeight: '700',
-              padding: '6px 14px', borderRadius: '8px', textDecoration: 'none',
-              letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '5px',
-              boxShadow: '0 0 12px rgba(220,38,38,0.4)'
-            }}>🛡️ Admin Panel</Link>
-          )}
-          {user ? (
-            <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-               <span style={{color: '#fff'}}>{profile?.full_name || user.email.split('@')[0]}</span>
-               <button onClick={handleLogout} className="btn-secondary" style={{padding: '5px 15px', fontSize: '0.8rem'}}>Keluar</button>
-            </div>
-          ) : <div className="avatar"></div>}
-        </div>
-      </nav>
-
-      <div className="platform-container">
-        <aside className="sidebar">
-          <ul className="side-menu">
-            <li className="active">🏠 Beranda</li>
-            <li>🔥 Sedang Tren</li>
-            <li>📚 Edukasi Bisnis</li>
-            <li>🎨 Seni & Budaya</li>
-            <li style={{cursor: 'pointer'}} onClick={() => window.location.href = '/studio'}>⚙️ Kelola Konten Saya (Studio)</li>
-          </ul>
-        </aside>
-
-        <main className="feed">
-          <div className="create-post glass-panel" style={{flexDirection: 'column', alignItems: 'flex-start'}}>
-            <div style={{display: 'flex', gap: '15px', width: '100%', marginBottom: '10px'}}>
-              <div className="avatar-small" style={{display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}}>
-                  {profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'U'}
+      {tipPost && (
+          <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={()=>setTipPost(null)}>
+              <div className="glass-panel" style={{ width: '100%', maxWidth: '400px' }} onClick={e=>e.stopPropagation()}>
+                  <h2 style={{ marginBottom: '10px' }}>Tip untuk Kreator</h2>
+                  <p style={{ color: 'var(--text-secondary)', marginBottom: '20px' }}>Berikan apresiasi untuk {tipPost.user_name}</p>
+                  <input type="number" placeholder="Nominal Rp" className="post-input" style={{ width: '100%', marginBottom: '20px' }} value={tipAmount} onChange={e=>setTipAmount(e.target.value)} />
+                  <button className="btn-premium" style={{ width: '100%' }} onClick={handleSendTip}>Kirim Tip</button>
               </div>
-              <input type="text" placeholder="Deskripsi post..." className="post-input" value={content} onChange={e => setContent(e.target.value)} />
-            </div>
-            <div style={{display: 'flex', gap: '15px', width: '100%', alignItems: 'center'}}>
-              <input type="text" placeholder="Link Video (G-Drive, YouTube, IG, TikTok)" className="post-input" style={{flex: 1}} value={mediaLink} onChange={e => setMediaLink(e.target.value)} />
-              
-              <label style={{color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: '5px'}}>
-                  <input type="checkbox" checked={isPremium} onChange={(e) => setIsPremium(e.target.checked)} />
-                  Eksklusif (Premium)
-              </label>
+          </div>
+      )}
 
-              <button className="btn-primary btn-post" onClick={handlePostSubmit}>Unggah</button>
+      <div className="layout-wrapper">
+        <Sidebar />
+
+        {/* Main Feed */}
+        <main className="main-feed">
+          {/* Post Composer Upgrade */}
+          <div className="glass-panel composer-card" style={{ marginBottom: '32px', borderRadius: '28px', padding: '28px', border: '1px solid rgba(255,255,255,0.1)' }}>
+            <div style={{ display: 'flex', gap: '18px', marginBottom: '24px' }}>
+              <div className="avatar-small" style={{ background: 'var(--gradient-premium)', width: '52px', height: '52px', borderRadius: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 900, flexShrink: 0 }}>
+                {profile?.display_name ? profile.display_name.charAt(0) : 'U'}
+              </div>
+              <textarea 
+                placeholder="Ceritakan apa yang sedang terjadi..." 
+                className="post-input composer-textarea" 
+                style={{ background: 'transparent', padding: '10px 0', border: 'none', resize: 'none', height: '90px', flex: 1, fontSize: '1.1rem' }} 
+                value={content} 
+                onChange={e => setContent(e.target.value)} 
+              />
+            </div>
+            
+            <div className="composer-actions" style={{ display: 'grid', gap: '16px' }}>
+                <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                  <div style={{ position: 'absolute', left: '16px', color: 'var(--accent-purple)', display: 'flex', alignItems: 'center' }}>
+                    <LinkIcon size={18} />
+                  </div>
+                  <input 
+                    type="text" 
+                    placeholder="Tempel tautan video (YT, TikTok, IG)..." 
+                    className="post-input" 
+                    style={{ padding: '14px 16px 14px 48px', fontSize: '0.95rem', borderRadius: '18px', background: 'rgba(0,0,0,0.2)' }} 
+                    value={mediaLink} 
+                    onChange={e => setMediaLink(e.target.value)} 
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+                  <div style={{ display: 'flex', gap: '20px' }}>
+                    <label className="composer-option">
+                      <input type="checkbox" checked={isPremium} onChange={e => setIsPremium(e.target.checked)} />
+                      <Lock size={16} />
+                      <span>Konten Premium</span>
+                    </label>
+                    <div className="composer-option" style={{ cursor: 'default' }}>
+                      <Globe size={16} />
+                      <span>Publik</span>
+                    </div>
+                  </div>
+                  <button className="btn-premium composer-submit" style={{ padding: '12px 32px', borderRadius: '16px', fontWeight: 800 }} onClick={handlePostSubmit}>
+                    Posting
+                  </button>
+                </div>
             </div>
           </div>
 
-          {loadingPosts && <p style={{color: 'white', textAlign: 'center'}}>Memuat post...</p>}
+          {loadingPosts && <div className="skeleton" style={{ height: '400px', borderRadius: '24px', marginBottom: '32px' }}></div>}
 
-          {posts.map((post, index) => (
-            <div key={post.id} className="post-card glass-panel fade-up visible">
-              <div className="post-header">
-                <div className={`post-avatar profile-${(index % 4) + 1}`}></div>
-                <div className="post-info">
-                  <h4>{post.user_name} <span className="verified">✓</span> {post.is_premium && <span className="badge" style={{background: 'var(--accent-gold)', color: '#000'}}>EKSKLUSIF</span>}</h4>
-                  <p>@{(post.user_name || '').toLowerCase().replace(/\s/g, '')} • {new Date(post.created_at).toLocaleDateString()}</p>
-                </div>
-              </div>
-              
-              <div className="post-content">
-                <p>{post.content}</p>
-                
-                {(!post.is_premium || (user && post.user_id === user.id) || subscriptions.includes(post.user_id)) ? (
-                  <div className="video-embed">
-                     {renderMedia(post.google_drive_link)}
+          {posts.map((post, idx) => (
+            <article key={post.id} className="post-card fade-up" style={{ animationDelay: `${idx * 0.1}s` }}>
+              <header style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div className={`post-avatar profile-${(idx % 4) + 1}`}></div>
+                  <div>
+                    <h4 style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {post.user_name} <CheckCircle2 size={14} color="#1d9bf0" fill="#1d9bf0" />
+                    </h4>
+                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>@{post.user_name.toLowerCase().replace(/\s/g, '')} • {new Date(post.created_at).toLocaleDateString()}</p>
                   </div>
-                ) : (
-                  <div className="locked-content">
-                    <div className="lock-icon">🔒</div>
-                    <p>Konten Eksklusif Khusus Pelanggan</p>
-                    <button className="btn-premium" onClick={() => handleSubscribe(post.user_id)}>
-                        Berlangganan Rp 50.000 / Permanen
+                </div>
+                <button style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}><MoreHorizontal size={20} /></button>
+              </header>
+
+              <div style={{ padding: '0 20px 16px', wordBreak: 'break-word' }}>{post.content}</div>
+
+              {(!post.is_premium || (user && post.user_id === user.id) || subscriptions.includes(post.user_id)) ? (
+                renderMedia(post.google_drive_link)
+              ) : (
+                <div className="post-media aspect-landscape">
+                  <div className="post-locked-overlay">
+                    <div style={{ background: 'rgba(255,255,255,0.1)', padding: '20px', borderRadius: '50%', marginBottom: '20px' }}>
+                      <Lock size={48} color="var(--accent-gold)" />
+                    </div>
+                    <h3 style={{ fontSize: '1.5rem', marginBottom: '8px' }}>Konten Eksklusif</h3>
+                    <p style={{ color: 'rgba(255,255,255,0.7)', marginBottom: '24px', maxWidth: '280px' }}>Berlangganan untuk melihat konten spesial dari {post.user_name}</p>
+                    <button className="btn-premium" style={{ width: '100%', maxWidth: '240px' }} onClick={() => handleSubscribe(post.user_id)}>
+                      Berlangganan Rp 50.000
                     </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
 
-              <div className="post-actions" style={{borderBottom: activeCommentPost === post.id ? '1px solid var(--glass-border)' : 'none', paddingBottom: activeCommentPost === post.id ? '20px' : '0'}}>
-                <span onClick={() => handleLike(post)} style={{color: post.has_liked ? 'var(--accent-gold)' : 'inherit'}}>
-                    {post.has_liked ? '❤️' : '🤍'} {post.likes_count} Suka
-                </span>
-                <span onClick={() => openComments(post.id)}>💬 {post.comments_count} Komentar</span>
-                <span onClick={() => { if(!user){alert("Login dulu!");return;} setTipPost(post);}}>💸 Beri Tip</span>
-              </div>
+              <footer className="post-actions-row">
+                <div className="action-item" onClick={() => handleLike(post)} style={{ color: post.has_liked ? 'var(--accent-rose)' : 'inherit' }}>
+                  <Heart size={22} fill={post.has_liked ? "currentColor" : "none"} />
+                  <span>{post.likes_count}</span>
+                </div>
+                <div className="action-item" onClick={() => openComments(post.id)}>
+                  <MessageCircle size={22} />
+                  <span>{post.comments_count}</span>
+                </div>
+                <div className="action-item" onClick={() => { if(!user)return alert("Login!"); setTipPost(post); }}>
+                  <DollarSign size={22} />
+                  <span>Tip</span>
+                </div>
+              </footer>
 
               {activeCommentPost === post.id && (
-                  <div className="comments-section" style={{marginTop: '20px'}}>
-                      {commentsData.map(c => (
-                          <div key={c.id} style={{marginBottom: '10px', background: 'rgba(255,255,255,0.02)', padding: '10px', borderRadius: '10px'}}>
-                              <strong style={{color: '#fff', fontSize: '0.9rem'}}>{c.user_name}</strong>
-                              <p style={{fontSize: '0.9rem', color: 'var(--text-secondary)', marginTop: '2px'}}>{c.content}</p>
-                          </div>
-                      ))}
-                      <div style={{display: 'flex', gap: '10px', marginTop: '15px'}}>
-                          <input type="text" className="post-input" placeholder="Tulis balasan..." style={{padding: '10px 15px'}} value={commentText} onChange={e=>setCommentText(e.target.value)} />
-                          <button className="btn-secondary" style={{padding: '0 20px'}} onClick={() => submitComment(post.id)}>Kirim</button>
+                <div style={{ padding: '0 20px 20px', borderTop: '1px solid var(--glass-border)', paddingTop: '20px' }}>
+                  {commentsData.map(c => (
+                    <div key={c.id} style={{ marginBottom: '12px', display: 'flex', gap: '10px' }}>
+                      <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--glass-border)' }}></div>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: '0.85rem' }}>{c.user_name}</div>
+                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{c.content}</div>
                       </div>
+                    </div>
+                  ))}
+                  <div style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                    <input type="text" className="post-input" placeholder="Tulis komentar..." style={{ padding: '8px 16px', fontSize: '0.9rem' }} value={commentText} onChange={e=>setCommentText(e.target.value)} />
+                    <button className="btn-secondary" style={{ padding: '0 16px' }} onClick={() => submitComment(post.id)}>Kirim</button>
                   </div>
+                </div>
               )}
-            </div>
+            </article>
           ))}
         </main>
-        
-        <aside className="suggestions">
-          <div className="glass-panel">
-            <h3>Kreator Disarankan</h3>
-            <div className="suggestion-item">
-              <div className="post-avatar profile-3"></div>
-              <div className="sugg-info">
-                <h4>Jamal Tech</h4>
-                <p>@jamal_it</p>
-              </div>
+
+        {/* Right Panel */}
+        <aside className="right-panel">
+          <div style={{ position: 'sticky', top: '100px' }}>
+            <div className="glass-panel" style={{ borderRadius: '24px' }}>
+              <h3 style={{ marginBottom: '16px' }}>Saran Kreator</h3>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className={`post-avatar profile-${i}`} style={{ width: '40px', height: '40px' }}></div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>Kreator {i}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>@kreator_{i}</div>
+                    </div>
+                  </div>
+                  <button className="btn-secondary" style={{ padding: '6px 16px', fontSize: '0.8rem' }}>Ikuti</button>
+                </div>
+              ))}
             </div>
           </div>
         </aside>
       </div>
+
+      <style>{`
+        .composer-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+        .composer-card:focus-within { border-color: var(--accent-purple) !important; box-shadow: 0 10px 40px rgba(124, 58, 237, 0.1); }
+        .composer-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            padding: 8px 12px;
+            border-radius: 12px;
+            transition: all 0.2s;
+        }
+        .composer-option:hover { background: rgba(255,255,255,0.05); color: var(--text-primary); }
+        .composer-option input { display: none; }
+        .composer-option:has(input:checked) { color: var(--accent-gold); background: rgba(197, 160, 89, 0.1); }
+        
+        @media (max-width: 768px) {
+            .composer-card { padding: 20px !important; margin-bottom: 24px !important; border-radius: 20px !important; }
+            .composer-textarea { height: 70px !important; font-size: 1rem !important; }
+            .composer-submit { width: 100%; margin-top: 10px; }
+        }
+      `}</style>
     </div>
   );
 }

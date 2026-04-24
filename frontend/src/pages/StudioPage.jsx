@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { supabase } from '../supabaseClient';
 import AuthModal from '../components/AuthModal';
+import Navbar from '../components/Navbar';
+import Sidebar from '../components/Sidebar';
+import { Edit3, Trash2, Video, Lock, Unlock, ArrowLeft } from 'lucide-react';
 
 export default function StudioPage() {
     const [user, setUser] = useState(null);
+    const [profile, setProfile] = useState(null);
     const [posts, setPosts] = useState([]);
-    
-    // Modal State
     const [editingPost, setEditingPost] = useState(null);
     const [editContent, setEditContent] = useState('');
     const [editLink, setEditLink] = useState('');
@@ -17,33 +19,42 @@ export default function StudioPage() {
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null);
-            if (session?.user) fetchMyPosts(session.user.id);
+            if (session?.user) {
+                fetchProfile(session.user.id);
+                fetchMyPosts(session.user.id);
+            }
         });
         const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
-            if (session?.user) fetchMyPosts(session.user.id);
+            if (session?.user) {
+                fetchProfile(session.user.id);
+                fetchMyPosts(session.user.id);
+            }
         });
         return () => authListener.subscription.unsubscribe();
     }, []);
 
+    const fetchProfile = async (id) => {
+        try {
+            const res = await axios.get(`/api/profiles/${id}`);
+            setProfile(res.data);
+        } catch (err) { console.error(err); }
+    };
+
     const fetchMyPosts = async (uid) => {
         try {
             const res = await axios.get(`/api/posts?user_id=${uid}`);
-            setPosts(res.data.filter(p => p.user_id === uid)); // Filter locally as safety measure
-        } catch (e) {
-            console.error(e);
-        }
+            setPosts(res.data.filter(p => p.user_id === uid));
+        } catch (e) { console.error(e); }
     };
 
     const handleDelete = async (postId) => {
-        if (!window.confirm("Yakin ingin menghapus postingan ini selamanya? \nSeluruh rekam data (komentar/likes) akan hancur.")) return;
+        if (!window.confirm("Hapus konten ini selamanya?")) return;
         try {
             await axios.delete(`/api/posts/${postId}`, { data: { user_id: user.id } });
             setPosts(posts.filter(p => p.id !== postId));
-            alert("Video/Postingan sukses dihapus!");
-        } catch (e) {
-            alert('Gagal menghapus: ' + (e.response?.data?.error || e.message));
-        }
+            alert("Terhapus!");
+        } catch (e) { alert('Gagal.'); }
     };
 
     const handleEditSave = async () => {
@@ -55,16 +66,11 @@ export default function StudioPage() {
                 user_id: user.id
             });
             setPosts(posts.map(p => p.id === editingPost.id ? { 
-                ...p, 
-                content: res.data.content, 
-                google_drive_link: res.data.google_drive_link, 
-                is_premium: res.data.is_premium 
+                ...p, content: res.data.content, google_drive_link: res.data.google_drive_link, is_premium: res.data.is_premium 
             } : p));
             setEditingPost(null);
-            alert("Konten berhasil diperbarui!");
-        } catch (e) {
-            alert('Gagal update: ' + (e.response?.data?.error || e.message));
-        }
+            alert("Berhasil diperbarui!");
+        } catch (e) { alert('Gagal.'); }
     };
 
     const getEmbedUrl = (url) => {
@@ -73,69 +79,77 @@ export default function StudioPage() {
         return url;
     };
 
+    const handleLogout = async () => await supabase.auth.signOut();
+
     if (!user) return <AuthModal onLoginSuccess={(u) => {setUser(u); fetchMyPosts(u.id);}} />;
 
     return (
-        <div className="platform-body">
+        <div className="platform-body" style={{ minHeight: '100vh' }}>
+            <Navbar user={user} profile={profile} handleLogout={handleLogout} />
+
             {editingPost && (
-                <div className="modal-overlay" onClick={() => setEditingPost(null)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{textAlign: 'left'}}>
-                        <h2>Edit Konten</h2>
-                        <p style={{color: 'gray', marginBottom: '10px'}}>Perbarui judul / link Drive Anda</p>
+                <div className="modal-overlay" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }} onClick={() => setEditingPost(null)}>
+                    <div className="glass-panel" style={{ width: '100%', maxWidth: '500px' }} onClick={e => e.stopPropagation()}>
+                        <h2 style={{ marginBottom: '10px' }}>Edit Konten</h2>
+                        <textarea className="post-input" value={editContent} onChange={e => setEditContent(e.target.value)} style={{ width: '100%', height: '100px', marginBottom: '15px' }} />
+                        <input type="text" className="post-input" value={editLink} onChange={e => setEditLink(e.target.value)} style={{ width: '100%', marginBottom: '15px' }} />
                         
-                        <input type="text" placeholder="Deskripsi materi..." value={editContent} onChange={e => setEditContent(e.target.value)} style={{width: '100%', marginBottom: '10px'}} />
-                        <input type="text" placeholder="Link Google Drive Original" value={editLink} onChange={e => setEditLink(e.target.value)} style={{width: '100%', marginBottom: '10px'}} />
-                        
-                        <label style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: 'white'}}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', cursor: 'pointer' }}>
                             <input type="checkbox" checked={editPremium} onChange={e => setEditPremium(e.target.checked)} />
-                            Paywall Eksklusif (Hanya untuk Subshribers)
+                            <span>Eksklusif (Premium)</span>
                         </label>
                         
-                        <button className="btn-primary" onClick={handleEditSave} style={{width: '100%'}}>Simpan Perubahan</button>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <button className="btn-premium" onClick={handleEditSave} style={{ flex: 1 }}>Simpan</button>
+                            <button className="btn-secondary" onClick={() => setEditingPost(null)} style={{ flex: 1 }}>Batal</button>
+                        </div>
                     </div>
                 </div>
             )}
 
-            <nav className="navbar platform-nav">
-                <div className="logo"><Link to="/creators" className="no-style">Ambali<span className="dot">.</span><span className="badge">Studio</span></Link></div>
-                <div className="nav-right">
-                    <Link to="/creators" className="btn-secondary">Kembali Beranda EduFans</Link>
-                </div>
-            </nav>
+            <div className="layout-wrapper">
+                <Sidebar />
+                
+                <main className="main-feed">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '32px' }}>
+                        <Link to="/creators" className="btn-secondary" style={{ padding: '10px' }}>
+                            <ArrowLeft size={20} />
+                        </Link>
+                        <h1 style={{ fontSize: '2rem' }}>Studio Manajemen</h1>
+                    </div>
 
-            <div className="platform-container">
-                <main className="feed" style={{marginLeft: 'auto', marginRight: 'auto', flex: 1}}>
-                    <h2 style={{color: 'white', marginBottom: '20px', fontFamily: 'Outfit'}}>Manajemen Konten Saya</h2>
-                    {posts.length === 0 && <p style={{color: 'gray'}}>Anda belum mengunggah konten apapun di sini.</p>}
-
-                    {posts.map((post) => (
-                        <div key={post.id} className="post-card glass-panel fade-up visible">
-                            <div className="post-header" style={{display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px'}}>
-                                <div>
-                                    <p style={{color: 'gray', fontSize: '0.9rem'}}>{new Date(post.created_at).toLocaleDateString()}</p>
-                                    {post.is_premium ? (
-                                        <span className="badge" style={{background: 'var(--accent-gold)', color: '#000', padding: '3px 8px', borderRadius: '5px', fontSize: '0.7rem'}}>PREMIUM</span>
-                                    ) : (
-                                        <span className="badge" style={{background: '#888', color: '#fff', padding: '3px 8px', borderRadius: '5px', fontSize: '0.7rem'}}>GRATIS</span>
-                                    )}
+                    <div style={{ display: 'grid', gap: '20px' }}>
+                        {posts.length === 0 && (
+                          <div className="glass-panel" style={{ textAlign: 'center', padding: '60px', borderRadius: '24px' }}>
+                            <Video size={48} color="var(--text-muted)" style={{ marginBottom: '20px' }} />
+                            <p style={{ color: 'var(--text-secondary)' }}>Belum ada konten.</p>
+                          </div>
+                        )}
+                        
+                        {posts.map((post) => (
+                            <div key={post.id} className="glass-panel" style={{ display: 'flex', gap: '20px', alignItems: 'flex-start', borderRadius: '24px' }}>
+                                <div style={{ width: '120px', height: '80px', borderRadius: '12px', overflow: 'hidden', flexShrink: 0, background: '#000' }}>
+                                    <iframe src={getEmbedUrl(post.google_drive_link)} style={{ width: '100%', height: '100%', border: 'none' }} scrolling="no"></iframe>
                                 </div>
-                                <div style={{display: 'flex', gap: '10px', alignItems: 'center'}}>
-                                    <button className="btn-secondary" style={{padding: '5px 15px', background: 'rgba(255,255,255,0.1)'}} onClick={() => {
-                                        setEditingPost(post); setEditContent(post.content); setEditLink(post.google_drive_link); setEditPremium(post.is_premium);
-                                    }}>Edit</button>
-                                    
-                                    <button className="btn-secondary" style={{padding: '5px 15px', background: 'rgba(255,50,50,0.1)', color: '#ff6666', border: '1px solid rgba(255,50,50,0.3)'}} onClick={() => handleDelete(post.id)}>Hapus</button>
+                                
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            {post.is_premium ? <Lock size={14} color="var(--accent-gold)" /> : <Unlock size={14} color="var(--text-muted)" />}
+                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{new Date(post.created_at).toLocaleDateString()}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <button className="btn-secondary" style={{ padding: '8px', borderRadius: '10px' }} onClick={() => {
+                                                setEditingPost(post); setEditContent(post.content); setEditLink(post.google_drive_link); setEditPremium(post.is_premium);
+                                            }}><Edit3 size={16} /></button>
+                                            <button className="btn-secondary" style={{ padding: '8px', borderRadius: '10px', color: 'var(--accent-rose)' }} onClick={() => handleDelete(post.id)}><Trash2 size={16} /></button>
+                                        </div>
+                                    </div>
+                                    <p style={{ fontWeight: 600 }}>{post.content}</p>
                                 </div>
                             </div>
-                            
-                            <div className="post-content" style={{marginTop: '15px'}}>
-                                <p>{post.content}</p>
-                                <div className="video-embed" style={{marginTop: '10px', height: '150px'}}>
-                                    <iframe src={getEmbedUrl(post.google_drive_link)} allow="autoplay" allowFullScreen style={{height: '100%', width: '100%', objectFit: 'cover'}}></iframe>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                        ))}
+                    </div>
                 </main>
             </div>
         </div>

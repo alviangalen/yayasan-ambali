@@ -4,6 +4,10 @@ import CreatorsPage from './pages/CreatorsPage';
 import TopUpPage from './pages/TopUpPage';
 import StudioPage from './pages/StudioPage';
 import AdminPage from './pages/AdminPage';
+import TrendingPage from './pages/TrendingPage';
+import LivePage from './pages/LivePage';
+import SettingsPage from './pages/SettingsPage';
+import ProfilePage from './pages/ProfilePage';
 import { useEffect } from 'react';
 
 function App() {
@@ -32,6 +36,10 @@ function App() {
         <Route path="/topup" element={<TopUpPage />} />
         <Route path="/studio" element={<StudioPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/trending" element={<TrendingPage />} />
+        <Route path="/live" element={<LivePage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+        <Route path="/profile/:username" element={<ProfilePage />} />
       </Routes>
     </Router>
   );
