@@ -159,8 +159,10 @@ h1, h2, h3, h4, h5, .font-heading {
     margin-bottom: 32px;
     display: flex;
     flex-direction: column;
-    min-height: 200px; /* Prevent height jump */
+    min-height: 200px;
     overflow: hidden;
+    will-change: transform, opacity; /* Stabilize rendering */
+    transform: translateZ(0); /* Hardware acceleration */
 }
 
 .post-content {

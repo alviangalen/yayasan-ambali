@@ -341,7 +341,7 @@ export default function CreatorsPage() {
           {loadingPosts && <div className="skeleton" style={{ height: '400px', borderRadius: '24px', marginBottom: '32px' }}></div>}
 
           {posts.map((post, idx) => (
-            <article key={post.id} className="post-card fade-up" style={{ animationDelay: `${idx * 0.1}s` }}>
+            <article key={post.id} className="post-card" style={{ transition: 'all 0.3s' }}>
               <header style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <div className={`post-avatar profile-${(idx % 4) + 1}`}></div>
