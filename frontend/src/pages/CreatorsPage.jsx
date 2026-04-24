@@ -239,6 +239,15 @@ export default function CreatorsPage() {
           <Link to="/topup" className="balance" style={{textDecoration: 'none'}}>
               Saldo: Rp {profile?.balance ? parseFloat(profile.balance).toLocaleString('id-ID') : 0} ➕
           </Link>
+          {user?.email === 'admin@gmail.com' && (
+            <Link to="/admin" style={{
+              background: 'linear-gradient(135deg, #dc2626, #991b1b)',
+              color: '#fff', fontSize: '0.8rem', fontWeight: '700',
+              padding: '6px 14px', borderRadius: '8px', textDecoration: 'none',
+              letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '5px',
+              boxShadow: '0 0 12px rgba(220,38,38,0.4)'
+            }}>🛡️ Admin Panel</Link>
+          )}
           {user ? (
             <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
                <span style={{color: '#fff'}}>{profile?.full_name || user.email.split('@')[0]}</span>

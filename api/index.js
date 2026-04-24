@@ -97,10 +97,11 @@ app.post('/api/posts', async (req, res) => {
 });
 
 app.put('/api/posts/:id', async (req, res) => {
-    const { content, google_drive_link, is_premium, user_id } = req.body;
+    const { content, google_drive_link, is_premium, user_id, email } = req.body;
+    const isAdmin = email === 'admin@gmail.com';
     
     const { data: check } = await supabase.from('posts').select('user_id').eq('id', req.params.id).single();
-    if (!check || check.user_id !== user_id) return res.status(403).json({ error: 'Unauthorized to edit this post' });
+    if (!check || (!isAdmin && check.user_id !== user_id)) return res.status(403).json({ error: 'Unauthorized to edit this post' });
 
     const { data, error } = await supabase.from('posts')
         .update({ content, google_drive_link, is_premium })
@@ -111,10 +112,17 @@ app.put('/api/posts/:id', async (req, res) => {
 });
 
 app.delete('/api/posts/:id', async (req, res) => {
-    const { user_id } = req.body;
+    const { user_id, email } = req.body;
+    const isAdmin = email === 'admin@gmail.com';
 
     const { data: check } = await supabase.from('posts').select('user_id').eq('id', req.params.id).single();
-    if (!check || check.user_id !== user_id) return res.status(403).json({ error: 'Unauthorized to delete this post' });
+    if (!check || (!isAdmin && check.user_id !== user_id)) return res.status(403).json({ error: 'Unauthorized to delete this post' });
+
+    // Admin: juga hapus likes & comments terkait
+    if (isAdmin) {
+        await supabase.from('likes').delete().eq('post_id', req.params.id);
+        await supabase.from('comments').delete().eq('post_id', req.params.id);
+    }
 
     const { error } = await supabase.from('posts').delete().eq('id', req.params.id);
     if (error) return res.status(400).json({ error: error.message });
@@ -201,6 +209,50 @@ app.post('/api/tip', async (req, res) => {
     await supabase.from('transactions').insert([{ sender_id, receiver_id, type: 'tip', amount: tipAmount }]);
 
     res.json({ status: 'success', balance: sender.balance - tipAmount });
+});
+
+// --- API Admin ---
+app.get('/api/admin/stats', async (req, res) => {
+    const { email } = req.query;
+    if (email !== 'admin@gmail.com') return res.status(403).json({ error: 'Unauthorized' });
+
+    const [{ count: totalPosts }, { count: totalUsers }, { count: totalComments }, { count: totalLikes }] = await Promise.all([
+        supabase.from('posts').select('*', { count: 'exact', head: true }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('comments').select('*', { count: 'exact', head: true }),
+        supabase.from('likes').select('*', { count: 'exact', head: true }),
+    ]);
+
+    res.json({ totalPosts, totalUsers, totalComments, totalLikes });
+});
+
+app.get('/api/admin/posts', async (req, res) => {
+    const { email } = req.query;
+    if (email !== 'admin@gmail.com') return res.status(403).json({ error: 'Unauthorized' });
+
+    const { data, error } = await supabase.from('posts').select(`
+        *,
+        likes(user_id),
+        comments(id)
+    `).order('created_at', { ascending: false });
+    if (error) return res.status(400).json({ error: error.message });
+
+    const formatted = data.map(p => ({
+        ...p,
+        likes_count: p.likes ? p.likes.length : 0,
+        comments_count: p.comments ? p.comments.length : 0,
+        likes: undefined,
+        comments: undefined
+    }));
+    res.json(formatted);
+});
+
+app.delete('/api/admin/comments/:id', async (req, res) => {
+    const { email } = req.body;
+    if (email !== 'admin@gmail.com') return res.status(403).json({ error: 'Unauthorized' });
+    const { error } = await supabase.from('comments').delete().eq('id', req.params.id);
+    if (error) return res.status(400).json({ error: error.message });
+    res.json({ status: 'deleted' });
 });
 
 // VERCEL SERVERLESS EXPORT

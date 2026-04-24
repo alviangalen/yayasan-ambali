@@ -3,6 +3,7 @@ import LandingPage from './pages/LandingPage';
 import CreatorsPage from './pages/CreatorsPage';
 import TopUpPage from './pages/TopUpPage';
 import StudioPage from './pages/StudioPage';
+import AdminPage from './pages/AdminPage';
 import { useEffect } from 'react';
 
 function App() {
@@ -30,6 +31,7 @@ function App() {
         <Route path="/creators" element={<CreatorsPage />} />
         <Route path="/topup" element={<TopUpPage />} />
         <Route path="/studio" element={<StudioPage />} />
+        <Route path="/admin" element={<AdminPage />} />
       </Routes>
     </Router>
   );
