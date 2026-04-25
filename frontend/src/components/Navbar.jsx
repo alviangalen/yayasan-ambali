@@ -8,93 +8,104 @@ import {
   TrendingUp, 
   Video, 
   Settings,
-  PlusSquare
+  PlusSquare,
+  LogIn
 } from 'lucide-react';
 
 const Navbar = ({ user, profile, handleLogout }) => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const isLandingPage = currentPath === '/';
 
   return (
     <>
-      <nav className="nav-floating">
+      <nav className={`nav-floating ${isLandingPage ? 'nav-landing' : ''}`}>
         <div className="logo" style={{ fontSize: '1.5rem', fontWeight: 900 }}>
           <Link to="/" style={{ color: 'inherit', textDecoration: 'none' }}>
             Ambali<span style={{ color: 'var(--accent-purple)' }}>.</span>
           </Link>
         </div>
 
-        {/* Desktop Nav Items (Hidden on Mobile) */}
+        {/* Desktop Nav Items */}
         <div className="nav-desktop-content" style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
-          {user && (
-            <Link to="/topup" className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Wallet size={16} color="var(--accent-gold)" />
-              <span className="nav-label">Rp {profile?.balance ? parseFloat(profile.balance).toLocaleString('id-ID') : 0}</span>
-            </Link>
-          )}
-
-          {user?.email === 'admin@gmail.com' && (
-            <Link to="/admin" className="btn-premium" style={{ padding: '8px 16px', fontSize: '0.8rem', background: 'linear-gradient(135deg, #ef4444, #991b1b)' }}>
-              <ShieldCheck size={16} />
-              <span className="nav-label">Admin</span>
-            </Link>
-          )}
-
           {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div className="nav-label" style={{ textAlign: 'right' }}>
-                <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{profile?.full_name || user.email.split('@')[0]}</div>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Member</div>
+            <>
+              <Link to="/topup" className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Wallet size={16} color="var(--accent-gold)" />
+                <span className="nav-label">Rp {profile?.balance ? parseFloat(profile.balance).toLocaleString('id-ID') : 0}</span>
+              </Link>
+
+              {user?.email === 'admin@gmail.com' && (
+                <Link to="/admin" className="btn-premium" style={{ padding: '8px 16px', fontSize: '0.8rem', background: 'linear-gradient(135deg, #ef4444, #991b1b)' }}>
+                  <ShieldCheck size={16} />
+                  <span className="nav-label">Admin</span>
+                </Link>
+              )}
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className="nav-label" style={{ textAlign: 'right' }}>
+                  <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{profile?.display_name || user.email.split('@')[0]}</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Member</div>
+                </div>
+                <button onClick={handleLogout} className="btn-secondary" style={{ padding: '8px', borderRadius: '12px' }}>
+                  <LogOut size={18} />
+                </button>
               </div>
-              <button onClick={handleLogout} className="btn-secondary" style={{ padding: '8px', borderRadius: '12px' }}>
-                <LogOut size={18} />
-              </button>
-            </div>
+            </>
           ) : (
-            <div className="avatar skeleton" style={{ width: '40px', height: '40px', borderRadius: '12px' }}></div>
+            <Link to="/creators" className="btn-premium" style={{ padding: '10px 24px' }}>
+              Masuk / Daftar
+            </Link>
           )}
         </div>
 
-        {/* Mobile Specific Icons (Shown on Mobile) */}
+        {/* Mobile Specific (Shown on Landing Page or when Logged Out) */}
         <div className="nav-mobile-icons" style={{ display: 'none', alignItems: 'center', gap: '12px' }}>
-          {user && (
-             <Link to="/topup" style={{ color: 'var(--accent-gold)' }}><Wallet size={20} /></Link>
-          )}
-          {user?.email === 'admin@gmail.com' && (
-             <Link to="/admin" style={{ color: '#ef4444' }}><ShieldCheck size={20} /></Link>
-          )}
-          {user && (
-            <button onClick={handleLogout} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}>
-              <LogOut size={20} />
-            </button>
+          {!user ? (
+            <Link to="/creators" className="btn-premium" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+              Masuk
+            </Link>
+          ) : (
+            <>
+              {isLandingPage && (
+                <Link to="/creators" className="btn-secondary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+                   Dashboard
+                </Link>
+              )}
+              <button onClick={handleLogout} style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)' }}>
+                <LogOut size={20} />
+              </button>
+            </>
           )}
         </div>
       </nav>
 
-      {/* Mobile Bottom Tab Bar (Premium Style) */}
-      <div className="mobile-bottom-nav">
-          <Link to="/creators" className={`mobile-nav-item ${currentPath === '/creators' ? 'active' : ''}`}>
-            <Home size={22} />
-            <span>Beranda</span>
-          </Link>
-          <Link to="/trending" className={`mobile-nav-item ${currentPath === '/trending' ? 'active' : ''}`}>
-            <TrendingUp size={22} />
-            <span>Tren</span>
-          </Link>
-          <Link to="/studio" className={`mobile-nav-item ${currentPath === '/studio' ? 'active' : ''}`}>
-            <div className="mobile-nav-center">
-              <PlusSquare size={26} color="#fff" />
-            </div>
-          </Link>
-          <Link to="/live" className={`mobile-nav-item ${currentPath === '/live' ? 'active' : ''}`}>
-            <Video size={22} />
-            <span>Live</span>
-          </Link>
-          <Link to="/settings" className={`mobile-nav-item ${currentPath === '/settings' ? 'active' : ''}`}>
-            <Settings size={22} />
-            <span>Setelan</span>
-          </Link>
-      </div>
+      {/* Mobile Bottom Tab Bar (HIDDEN ON LANDING PAGE) */}
+      {!isLandingPage && (
+        <div className="mobile-bottom-nav">
+            <Link to="/creators" className={`mobile-nav-item ${currentPath === '/creators' ? 'active' : ''}`}>
+              <Home size={22} />
+              <span>Beranda</span>
+            </Link>
+            <Link to="/trending" className={`mobile-nav-item ${currentPath === '/trending' ? 'active' : ''}`}>
+              <TrendingUp size={22} />
+              <span>Tren</span>
+            </Link>
+            <Link to="/studio" className={`mobile-nav-item ${currentPath === '/studio' ? 'active' : ''}`}>
+              <div className="mobile-nav-center">
+                <PlusSquare size={26} color="#fff" />
+              </div>
+            </Link>
+            <Link to="/live" className={`mobile-nav-item ${currentPath === '/live' ? 'active' : ''}`}>
+              <Video size={22} />
+              <span>Live</span>
+            </Link>
+            <Link to="/settings" className={`mobile-nav-item ${currentPath === '/settings' ? 'active' : ''}`}>
+              <Settings size={22} />
+              <span>Setelan</span>
+            </Link>
+        </div>
+      )}
 
       <style>{`
         @media (max-width: 768px) {
@@ -104,6 +115,12 @@ const Navbar = ({ user, profile, handleLogout }) => {
             width: calc(100% - 24px) !important;
             padding: 0 20px !important;
             height: 60px !important;
+          }
+          /* Custom style for Landing Page Nav on mobile */
+          .nav-landing {
+            background: rgba(13, 13, 18, 0.6) !important;
+            border-radius: 20px !important;
+            top: 15px !important;
           }
           .mobile-bottom-nav {
             position: fixed;

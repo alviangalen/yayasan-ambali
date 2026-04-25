@@ -39,6 +39,8 @@ body {
     line-height: 1.6;
     overflow-x: hidden;
     -webkit-font-smoothing: antialiased;
+    scroll-behavior: smooth;
+    overscroll-behavior-y: none; /* Prevent bounce lag */
 }
 
 h1, h2, h3, h4, h5, .font-heading {
@@ -56,6 +58,15 @@ h1, h2, h3, h4, h5, .font-heading {
     padding: 24px;
     transition: border-color 0.3s;
     contain: paint; /* Improved rendering stability */
+    transform: translateZ(0); /* Force GPU acceleration */
+}
+
+@media (max-width: 768px) {
+    .glass-panel {
+        backdrop-filter: blur(10px); /* Reduce blur on mobile to save FPS */
+        -webkit-backdrop-filter: blur(10px);
+        background: rgba(13, 13, 18, 0.85); /* More solid bg for performance */
+    }
 }
 
 .btn-premium {
@@ -198,7 +209,7 @@ h1, h2, h3, h4, h5, .font-heading {
     position: fixed;
     top: 20px;
     left: 50%;
-    transform: translateX(-50%);
+    transform: translateX(-50%) translateZ(0);
     width: min(calc(100% - 40px), 1200px);
     height: 72px;
     z-index: 1000;
@@ -206,12 +217,20 @@ h1, h2, h3, h4, h5, .font-heading {
     align-items: center;
     justify-content: space-between;
     padding: 0 32px;
-    border-radius: 99px; /* Complete capsule */
+    border-radius: 99px;
     background: rgba(13, 13, 18, 0.4);
     backdrop-filter: blur(30px);
     -webkit-backdrop-filter: blur(30px);
     border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    will-change: transform;
+}
+
+@media (max-width: 768px) {
+    .nav-floating {
+        backdrop-filter: blur(10px);
+        background: rgba(13, 13, 18, 0.8);
+    }
 }
 
 /* Sidebar Styling */
