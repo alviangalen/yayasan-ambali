@@ -16,7 +16,8 @@ import {
   Video,
   Globe,
   AtSign,
-  Sparkles
+  Sparkles,
+  Share2
 } from 'lucide-react';
 
 export default function CreatorsPage() {
@@ -207,6 +208,26 @@ export default function CreatorsPage() {
       } catch (err) { alert("Gagal!"); }
   };
 
+  const handleShare = async (post) => {
+      const shareUrl = `${window.location.origin}/profile/${post.user_name.toLowerCase().replace(/\s/g, '')}#${post.id}`;
+      const shareData = {
+          title: `Postingan dari ${post.user_name} di Ambali`,
+          text: post.content.substring(0, 50) + "...",
+          url: shareUrl
+      };
+
+      try {
+          if (navigator.share) {
+              await navigator.share(shareData);
+          } else {
+              await navigator.clipboard.writeText(shareUrl);
+              alert("Link profil kreator berhasil disalin!");
+          }
+      } catch (err) {
+          console.error("Gagal share:", err);
+      }
+  };
+
   const renderMedia = (url) => {
     if (!url) return null;
     let finalUrl = url;
@@ -386,6 +407,10 @@ export default function CreatorsPage() {
                 <div className="action-item" onClick={() => { if(!user)return alert("Login!"); setTipPost(post); }}>
                   <DollarSign size={22} />
                   <span>Tip</span>
+                </div>
+                <div className="action-item" onClick={() => handleShare(post)}>
+                  <Share2 size={20} />
+                  <span>Bagikan</span>
                 </div>
               </footer>
 

@@ -54,10 +54,13 @@ export default function ProfilePage() {
         setLoading(true);
         setError(null);
         try {
-            const res = await axios.get(`/api/profiles/search/${username}`);
+            const cleanUsername = decodeURIComponent(username).trim();
+            console.log("Mencari kreator:", cleanUsername);
+            const res = await axios.get(`/api/profiles/search/${cleanUsername}`);
             setCreator(res.data);
             fetchCreatorPosts(res.data.id);
         } catch (err) {
+            console.error("Error mencari profil:", err.response?.data || err.message);
             setError("Kreator tidak ditemukan.");
         } finally {
             setLoading(false);
@@ -68,6 +71,15 @@ export default function ProfilePage() {
         try {
             const res = await axios.get(`/api/posts?target_user_id=${uid}&user_id=${viewer?.id || ''}`);
             setPosts(res.data);
+            
+            // Auto-scroll to post if ID is in hash
+            const postId = window.location.hash.replace('#', '');
+            if (postId) {
+                setTimeout(() => {
+                    const el = document.getElementById(`post-${postId}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
+            }
         } catch (e) { console.error(e); }
     };
 
@@ -179,7 +191,7 @@ export default function ProfilePage() {
                             </div>
                         ) : (
                             posts.map((post) => (
-                                <article key={post.id} className="post-card">
+                                <article key={post.id} id={`post-${post.id}`} className="post-card">
                                     <div style={{ padding: '20px 24px 16px', fontWeight: 500 }}>{post.content}</div>
                                     
                                     {(!post.is_premium || isSubscribed || viewer?.id === creator.id) ? (

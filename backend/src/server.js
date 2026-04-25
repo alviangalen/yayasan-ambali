@@ -45,10 +45,11 @@ app.get('/api/profiles/:id', async (req, res) => {
 
 app.get('/api/profiles/search/:username', async (req, res) => {
     try {
+        const searchUsername = req.params.username.trim();
         const { data, error } = await supabase
             .from('profiles')
             .select('*')
-            .ilike('username', req.params.username)
+            .ilike('username', searchUsername)
             .single();
         if (error) throw error;
         res.json(data);
